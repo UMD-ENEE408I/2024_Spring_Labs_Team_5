@@ -1,107 +1,45 @@
-from scipy.io.wavfile import read
 import matplotlib.pyplot as plt
-from scipy.fft import fft, rfft, rfftfreq
 import numpy as np
-import wave
-from scipy.signal import butter, lfilter
-import pyaudio
+from scipy.fftpack import fft
+from scipy.io import wavfile
+from scipy.signal import butter,filtfilt, lfilter
 from scipy.io.wavfile import write
 
-# Question 1
-input_data = read("Cafe_with_noise.wav")
-fs = input_data[0]
-audio = input_data[1]
-# plt.plot(audio)
-# plt.title("Cafe_with_noise.wav")
-# plt.ylabel("Amplitude")
-# plt.xlabel("Time")
-# plt.show()
-zaz = False
-if(zaz):
-    vv = wave.open("Test.wav")
-    p = pyaudio.PyAudio()
-    chunk = 1024
-    f = vv
-    # open stream
-    stream = p.open(format=p.get_format_from_width(f.getsampwidth()),
-                    channels=f.getnchannels(),
-                    rate=f.getframerate(),
-                    output=True)
-    # read data
-    data = f.readframes(chunk)
-    # play stream
-    while len(data) > 0:
-        stream.write(data)
-        data = f.readframes(chunk)
-    # stop stream
-    stream.stop_stream()
-    stream.close()
-    # close PyAudio
-    p.terminate()
+sample_rate, audio_time_series = wavfile.read('Cafe_with_noise.wav')
 
-# Question 2
-N = len(audio)
+def fft_plot(audio, sample_rate):
+  N = len(audio)    # Number of samples
+  T = 1/sample_rate # Period
+  y_freq = fft(audio)
+  domain = len(y_freq) // 2
+  x_freq = np.linspace(0, sample_rate//2, N//2)
+  plt.plot(x_freq, abs(y_freq[:domain]))
+  plt.xlabel("Frequency [Hz]")
+  plt.ylabel("Frequency Amplitude |X(t)|")
+  return plt.show()
 
-yf = rfft(audio)
-xf = rfftfreq(N, 1 / fs)
+fft_plot(audio_time_series, sample_rate)
 
-# plt.figure(2)
-# plt.plot(np.abs(yf))
-#
-# plt.xlim(0, 20000)  # Set the limits for the x-axis values
-# plt.ylim(0, 100000000)
-# plt.title("Signal in frequency domain")
-#plt.show()
+startfreq = 1400
+cutoff = 1600
+order = 5
+fs = sample_rate
+nyq = fs * 0.5
 
-# Question 3
-# def butter_bandpass(lowcut, highcut, fs, order=5):
-#     nyq = 0.5 * fs
-#     low = lowcut / nyq
-#     high = highcut / nyq
-#     b, a = butter(order, [low, high], btype='band')
-#     return b, a
-#
-#
-# def butter_bandpass_filter(data, lowcut, highcut, fs, order=5):
-#     b, a = butter_bandpass(lowcut, highcut, fs, order=order)
-#     y = lfilter(b, a, data)
-#     return y
-def butter_lowpass(cutoff_freq, fs, order=5):
-    nyquist = 0.5 * fs
-    normal_cutoff = cutoff_freq / nyquist
-    b, a = butter(order, normal_cutoff, btype='low', analog=False)
-    return b, a
+def butter_lowpass_filter(data, cutoff, fs, order):
+    normal_cutoff = cutoff / nyq
+    normal_startfreq = startfreq / nyq
+    bandfilt = np.array([normal_startfreq, normal_cutoff])
 
-def apply_lowpass_filter(data, cutoff_freq, fs, order=5):
-    b, a = butter_lowpass(cutoff_freq, fs, order=order)
-    filtered_data = lfilter(b, a, data)
-    return filtered_data
+    # Get the filter coefficients
+    b, a = butter(order, bandfilt, btype='bandstop', analog=False)
+    y = filtfilt(b, a, data)
+    return y
 
+y = butter_lowpass_filter(audio_time_series, cutoff, fs, order)
 
+m = np.max(np.abs(y))
+y = (y/m).astype(np.float32)
 
-vv = wave.open("Cafe_with_noise.wav")
-fs = vv.getframerate()
-lowcut = 20
-highcut = 15000
-#y = butter_bandpass_filter(audio, lowcut, highcut, fs, order=3)
-# plt.plot(y)#, label='Filtered signal (%g Hz)' % f0)
-# plt.xlabel('time (seconds)')
-# plt.grid(True)
-# plt.axis('tight')
-# plt.legend(loc='upper left')
-# plt.show()
-y = apply_lowpass_filter(audio, 15000, 48000)
-N = len(y)
-
-yf = rfft(y)
-xf = rfftfreq(N, 1 / fs)
-
-plt.figure(2)
-plt.plot(np.abs(yf))
-
-plt.xlim(0, 20000)  # Set the limits for the x-axis values
-plt.ylim(0, 100000000)
-plt.title("Signal in frequency domain")
-plt.show()
-ww = np.int16(y)
-write('Test.wav',fs,ww)
+fft_plot(y, sample_rate)
+wavfile.write('test2.wav', sample_rate, y)
