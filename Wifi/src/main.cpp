@@ -1,22 +1,48 @@
-#include "WiFi.h"
+#include <WiFi.h>
 
-const char *ssid = "Your_SSID";  // Name of your network
-const char *password = "Your_Password";  // Password of your network
+const char *ssid = "YOUR_WIFI_SSID";
+const char *password = "YOUR_WIFI_PASSWORD";
+const char *host = "SERVER_IP_ADDRESS"; // The IP address of the NVIDIA AGX Xavier
+const uint16_t port = 12345;
 
-void setup() {
-  Serial.begin(9600);
-  // Setting the ESP32 as an access point
-  WiFi.softAP(ssid, password);
-    pinMode(14, OUTPUT);
+void setup()
+{
+  pinMode(14, OUTPUT);
   digitalWrite(14, LOW);
+  Serial.begin(9600);
+  WiFi.begin(ssid, password);
 
+  while (WiFi.status() != WL_CONNECTED)
+  {
+    delay(500);
+    Serial.print(".");
+  }
 
-
-  Serial.println("Access Point started");
-  Serial.print("IP address: ");
-  Serial.println(WiFi.softAPIP());
+  Serial.println("WiFi connected");
 }
 
-void loop() {
-  // Nothing to do here
+void loop()
+{
+  WiFiClient client;
+
+  if (!client.connect(host, port))
+  {
+    Serial.println("Connection to host failed");
+    delay(1000);
+    return;
+  }
+
+  Serial.println("Connected to server");
+  client.println("Hello from Heltec WiFi Kit 32!");
+
+  while (client.available())
+  {
+    String line = client.readStringUntil('\r');
+    Serial.print(line);
+  }
+
+  Serial.println("Disconnecting...");
+  client.stop();
+
+  delay(2000);
 }
