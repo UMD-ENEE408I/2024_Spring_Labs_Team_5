@@ -30,7 +30,7 @@ const unsigned int M2_I_SENSE = 34;
 
 const unsigned int PWM_VALUE = 1024; // Max PWM given 10 bit resolution
 
-const int freq = 5000;
+const int freq = 2500;
 const int ledChannel = 0;
 const int resolution = 10;
 
@@ -142,7 +142,7 @@ float getPosition(float previousPosition) {
 void move_straight(Encoder& enc1, Encoder& enc2, int dist){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 450; //450
+  base_pid = 300; //450
   Kp = 3; //3
   Kd = 0; //0
   Ki = 0;
@@ -173,13 +173,13 @@ void move_straight(Encoder& enc1, Encoder& enc2, int dist){
 void turn_left90(Encoder& enc1, Encoder& enc2){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 450; //450
-  Kp = 3; //3
-  Kd = 0; //0
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
   Ki = 0;
   long enc1_value = enc1.read();
   long enc2_value = enc2.read(); //right motor
-  while(enc2_value > -240){//3 3/8 inches 240 - try sensor fusion
+  while(enc2_value > -200){//3 3/8 inches -240 - try sensor fusion
     error = enc2_value - enc1_value;
     total_error += error;
     int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
@@ -203,9 +203,9 @@ void turn_left90(Encoder& enc1, Encoder& enc2){
 void turn_right90(Encoder& enc1, Encoder& enc2){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 450; //450
-  Kp = 3; //3
-  Kd = 0; //0
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
   Ki = 0;
   long enc1_value = enc1.read();
   long enc2_value = enc2.read(); //right motor
@@ -233,9 +233,9 @@ void turn_right90(Encoder& enc1, Encoder& enc2){
 void turn_180(Encoder& enc1, Encoder& enc2){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 450; //450
-  Kp = 3; //3
-  Kd = 0; //0
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
   Ki = 0;
   long enc1_value = enc1.read();
   long enc2_value = enc2.read(); //right motor
@@ -291,6 +291,78 @@ void white_line_follow(int spd, int kp_new, int kd_new){ //unsure if this one ac
   // Serial.print("left: \t"); Serial.print(left_motor);Serial.print("right: \t"); Serial.println(right_motor); 
   // Serial.println();
   last_error = error;
+}
+
+void right_turn_till_line(Encoder& enc1, Encoder& enc2){
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  long enc1_value = enc1.read();
+  long enc2_value = enc2.read(); //right motor
+  int time_to_turn = 0;
+  while(true){//3 3/8 inches 240 - try sensor fusion, check position of line
+    readADC();
+    digitalConvert();
+    error = enc2_value - enc1_value; 
+    total_error += error;
+    int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+    int right_motor = base_pid - pid_value;
+    int left_motor = base_pid + pid_value;
+    M1_forward(left_motor);
+    M2_backward(right_motor);
+    if((lineArray[0]==0)||(lineArray[1]==0)){
+      time_to_turn++;
+    }
+    if((time_to_turn>0)&&((lineArray[4]==0)||(lineArray[5]==0)||(lineArray[6]==0)||(lineArray[7]==0))){
+      break;
+    }
+    enc1_value = enc1.read();
+    enc2_value = enc2.read();
+    last_error = error;
+  }
+  M1_stop();
+  M2_stop();
+  delay(2000);
+}
+
+void left_turn_till_line(Encoder& enc1, Encoder& enc2){
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  long enc1_value = enc1.read();
+  long enc2_value = enc2.read(); //right motor
+  int time_to_turn = 0;
+  while(true){//3 3/8 inches -240 - try sensor fusion
+    int t_start = micros();
+    readADC();
+    int t_end = micros();
+    digitalConvert();
+    error = enc2_value - enc1_value;
+    total_error += error;
+    int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+    int right_motor = base_pid + pid_value;
+    int left_motor = base_pid - pid_value;
+    M1_backward(left_motor);
+    M2_forward(right_motor);
+    if((lineArray[12]==0)||(lineArray[11]==0)){
+      time_to_turn++;
+    }
+    if((time_to_turn>0)&&((lineArray[4]==0)||(lineArray[5]==0)||(lineArray[6]==0)||(lineArray[7]==0))){
+      break;
+    }
+    enc1_value = enc1.read();
+    enc2_value = enc2.read();
+    last_error = error;
+  }
+  M1_stop();
+  M2_stop();
+  delay(2000);
 }
 
 void setup() {
@@ -352,7 +424,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   delay(2000);
 
 
-  //Maze
+  //Maze - 3 of each color block
   while(true){
     white_line_follow(300, 8, 200);
     int turn_white = 0;
@@ -392,7 +464,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
 
   //segmented line, make sure to change K values and speed
   while(true){
-    white_line_follow(300, 12, 400);
+    white_line_follow(230, 12, 400);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -434,9 +506,11 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   delay(2000);
 */
 
+
+
   //Sound detection
   while(true){
-    white_line_follow(350, 8, 300);
+    white_line_follow(300, 8, 300);
     int turn_white = 0;
     for(int i = 0; i < 10; i++){
       if (lineArray[i] == 0) {
@@ -446,13 +520,14 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
     if(turn_white >= 5){
       M1_stop();
       M2_stop();
-      //delay(1000);
+      delay(1000);
       break;
     }
   }
-  turn_right90(enc1,enc2);
+  move_straight(enc1,enc2,3);
+  right_turn_till_line(enc1,enc2);
   while(true){
-    white_line_follow(350, 8, 300);
+    white_line_follow(300, 8, 300);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -462,55 +537,28 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
     if(all_white == 13) {
       M1_stop();
       M2_stop();
-      delay(2000);
+      delay(1000);
       break;
     }
   }
+  move_straight(enc1,enc2,3);
   //Turns here are wack, try turning until white detected in middle?
-  turn_right90(enc1,enc2); //wait for sound on right
+  //turn_right90(enc1,enc2); //wait for sound on right
+  right_turn_till_line(enc1,enc2);
+  //delay(2000);
   delay(2000);//5000
-  //turn_left90(enc1,enc2);
-  //turn_left90(enc1,enc2); //wait for sound on left
-  enc1.readAndReset();
-  enc2.readAndReset();
-  base_pid = 450; //450
-  Kp = 3; //3
-  Kd = 0; //0
-  Ki = 0;
-  long enc1_value = enc1.read();
-  long enc2_value = enc2.read(); //right motor
-  while(true){//3 3/8 inches 240 - try sensor fusion
-    error = enc2_value - enc1_value;
-    total_error += error;
-    int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
-    int right_motor = base_pid + pid_value;
-    int left_motor = base_pid - pid_value;
-
-    // Serial.print("left_enc: \t");Serial.print(enc1_value);Serial.print("\t right_enc: \t");Serial.println(enc2_value);
-    // Serial.print("Enc2 Degrees: \t"); Serial.print((enc2_value/154.32)); Serial.print("\t");
-    // Serial.print("left: \t"); Serial.print(left_motor);Serial.print("right: \t"); Serial.println(right_motor); 
-    M1_backward(left_motor);
-    M2_forward(right_motor);
-    if((lineArray[11]==0)||(lineArray[12]==0)){ //if this is here, remove both left turns
-      transition_done++;
-    }
-    if((transition_done>0) && ((lineArray[4]==0)||(lineArray[5]==0)||(lineArray[6]==0)||(lineArray[7]==0))){
-      M1_stop();
-      M2_stop();
-      break;
-    }
-    enc1_value = enc1.read();
-    enc2_value = enc2.read();
-    last_error = error;
-  }
+  // turn_left90(enc1,enc2);
+  // turn_left90(enc1,enc2); //wait for sound on left
+  left_turn_till_line(enc1,enc2);
   
   delay(2000);//5000
   if(sound_direction == 0){
-    turn_right90(enc1,enc2);
-    turn_right90(enc1,enc2);
+    // turn_right90(enc1,enc2);
+    // turn_right90(enc1,enc2);
+    right_turn_till_line(enc1,enc2);
   }
   while(true){
-    white_line_follow(320, 8, 300);
+    white_line_follow(300, 8, 300);
     int turn_white = 0;
     if(sound_direction == 1){
       for(int i = 0; i < 10; i++){
@@ -521,7 +569,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       if(turn_white >= 5){
         M1_stop();
         M2_stop();
-        //delay(1000);
+        delay(1000);
         break;
       }
     }else{
@@ -533,18 +581,20 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       if(turn_white >= 5){
         M1_stop();
         M2_stop();
-        //delay(1000);
+        delay(1000);
         break;
       }
     }
   }
   if(sound_direction == 0){
-    turn_left90(enc1,enc2);
+    move_straight(enc1,enc2,3);
+    left_turn_till_line(enc1,enc2);
   }else{
-    turn_right90(enc1,enc2);
+    move_straight(enc1,enc2,3);
+    right_turn_till_line(enc1,enc2);
   }
   while(true){
-    white_line_follow(320, 8, 300);
+    white_line_follow(300, 8, 300);
     int turn_white = 0;
     if(sound_direction == 1){
       for(int i = 0; i < 10; i++){
@@ -555,7 +605,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       if(turn_white >= 5){
         M1_stop();
         M2_stop();
-        //delay(1000);
+        delay(1000);
         break;
       }
     }else{
@@ -567,18 +617,20 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       if(turn_white >= 5){
         M1_stop();
         M2_stop();
-        //delay(1000);
+        delay(1000);
         break;
       }
     }
   }
   if(sound_direction == 0){
-    turn_left90(enc1,enc2);
+    move_straight(enc1,enc2,3);
+    left_turn_till_line(enc1,enc2);
   }else{
-    turn_right90(enc1,enc2);
+    move_straight(enc1,enc2,3);
+    right_turn_till_line(enc1,enc2);
   }
   while(true){
-    white_line_follow(320, 8, 300);
+    white_line_follow(300, 8, 300);
     int turn_white = 0;
     if(sound_direction == 0){
       for(int i = 0; i < 10; i++){
@@ -589,7 +641,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       if(turn_white >= 5){
         M1_stop();
         M2_stop();
-        //delay(1000);
+        delay(1000);
         break;
       }
     }else{
@@ -601,18 +653,20 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       if(turn_white >= 5){
         M1_stop();
         M2_stop();
-        //delay(1000);
+        delay(1000);
         break;
       }
     }
   }
   if(sound_direction == 1){
-    turn_left90(enc1,enc2);
+    move_straight(enc1,enc2,3);
+    left_turn_till_line(enc1,enc2);
   }else{
-    turn_right90(enc1,enc2);
+    move_straight(enc1,enc2,3);
+    right_turn_till_line(enc1,enc2);
   }
   while(true){
-    white_line_follow(350, 8, 300);
+    white_line_follow(300, 8, 300);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -622,87 +676,92 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
     if(all_white == 13) {
       M1_stop();
       M2_stop();
-      delay(2000);
+      delay(1000);
       break;
     }
   }
   move_straight(enc1, enc2, 12);
   turn_left90(enc1, enc2);
   move_straight(enc1, enc2, 12);
-  while(true){
-    white_line_follow(350, 8, 300);
-    int all_white = 0;
-    for (int i = 0; i < 13; i++) {
-      if (lineArray[i] == 0) {
-        all_white+=1;
-      } 
-    }
-    if(all_white == 13) {
-      M1_stop();
-      M2_stop();
-      delay(2000);
-      break;
-    }
-  }
-  move_straight(enc1, enc2, 12);
-  turn_left90(enc1, enc2);
-  move_straight(enc1, enc2, 12);
-  while(true){
-    white_line_follow(350, 8, 300);
-    int all_black = 0;
-    for (int i = 0; i < 13; i++) {
-      if (lineArray[i] == 1) {
-        all_black+=1;
-      } 
-    }
-    if(all_black == 13) {
-      M1_stop();
-      M2_stop();
-      //delay(2000);
-      break;
-    }
-  }
+
+  
+  //Small white line
+  // while(true){
+  //   white_line_follow(350, 8, 300);
+  //   int all_white = 0;
+  //   for (int i = 0; i < 13; i++) {
+  //     if (lineArray[i] == 0) {
+  //       all_white+=1;
+  //     } 
+  //   }
+  //   if(all_white == 13) {
+  //     M1_stop();
+  //     M2_stop();
+  //     delay(2000);
+  //     break;
+  //   }
+  // }
+  // move_straight(enc1, enc2, 12);
+  // turn_left90(enc1, enc2);
+  // move_straight(enc1, enc2, 12);
+
 
 
   //Straight shot to end
-  enc1.readAndReset();
-  enc2.readAndReset();
-  base_pid = 450; //450
-  Kp = 3; //3
-  Kd = 0; //0
-  Ki = 0;
-  long enc1_value = enc1.read();
-  long enc2_value = enc2.read();
-  // long dist_travelled = (enc1_value/154.32)*1.26*PI;
+  // while(true){
+  //   white_line_follow(350, 8, 300);
+  //   int all_black = 0;
+  //   for (int i = 0; i < 13; i++) {
+  //     if (lineArray[i] == 1) {
+  //       all_black+=1;
+  //     } 
+  //   }
+  //   if(all_black == 13) {
+  //     M1_stop();
+  //     M2_stop();
+  //     //delay(2000);
+  //     break;
+  //   }
+  // }
 
-  while(true){
-      //travel forwards
-      error = enc1_value + enc2_value;
-      total_error += error;
-      int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
-      int right_motor = base_pid + pid_value;
-      int left_motor = base_pid - pid_value;
-      M1_forward(left_motor);
-      M2_forward(right_motor);
-      int all_white = 0;
-      for (int i = 0; i < 13; i++) {
-        if (lineArray[i] == 0) {
-          all_white+=1;
-        } 
-      }
-      if(all_white == 13) { //try to reach end square without appearing to stop
-        M1_stop();
-        M2_stop();
-        move_straight(enc1, enc2, 12);
-        delay(2000);
-        break;
-      }
-      enc1_value = enc1.read();
-      enc2_value = enc2.read();
-      // dist_travelled = (enc1_value/154.32)*1.26*PI;
-      last_error = error;
-  }
-  delay(2000);
+  // enc1.readAndReset();
+  // enc2.readAndReset();
+  // base_pid = 450; //450
+  // Kp = 3; //3
+  // Kd = 0; //0
+  // Ki = 0;
+  // long enc1_value = enc1.read();
+  // long enc2_value = enc2.read();
+  // // long dist_travelled = (enc1_value/154.32)*1.26*PI;
+
+  // while(true){
+  //     //travel forwards
+  //     error = enc1_value + enc2_value;
+  //     total_error += error;
+  //     int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+  //     int right_motor = base_pid + pid_value;
+  //     int left_motor = base_pid - pid_value;
+  //     M1_forward(left_motor);
+  //     M2_forward(right_motor);
+  //     int all_white = 0;
+  //     for (int i = 0; i < 13; i++) {
+  //       if (lineArray[i] == 0) {
+  //         all_white+=1;
+  //       } 
+  //     }
+  //     if(all_white == 13) { //try to reach end square without appearing to stop
+  //       M1_stop();
+  //       M2_stop();
+  //       move_straight(enc1, enc2, 12);
+  //       delay(2000);
+  //       break;
+  //     }
+  //     enc1_value = enc1.read();
+  //     enc2_value = enc2.read();
+  //     // dist_travelled = (enc1_value/154.32)*1.26*PI;
+  //     last_error = error;
+  // }
+  // delay(2000);
 
   /*
   // For straight continuous line: speed = 350, kp = 2, kd = 100, ki = 0
