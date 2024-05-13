@@ -213,8 +213,8 @@ void turn_right90(Encoder& enc1, Encoder& enc2){
     error = enc2_value - enc1_value; //may have to subtract instead of add these
     total_error += error;
     int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
-    int right_motor = base_pid + pid_value;
-    int left_motor = base_pid - pid_value;
+    int right_motor = base_pid - pid_value;
+    int left_motor = base_pid + pid_value;
 
     // Serial.print("left_enc: \t");Serial.print(enc1_value);Serial.print("\t right_enc: \t");Serial.println(enc2_value);
     // Serial.print("Enc2 Degrees: \t"); Serial.print((enc2_value/154.32)); Serial.print("\t");
@@ -339,9 +339,7 @@ void left_turn_till_line(Encoder& enc1, Encoder& enc2){
   long enc2_value = enc2.read(); //right motor
   int time_to_turn = 0;
   while(true){//3 3/8 inches -240 - try sensor fusion
-    int t_start = micros();
     readADC();
-    int t_end = micros();
     digitalConvert();
     error = enc2_value - enc1_value;
     total_error += error;
@@ -404,7 +402,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   //Line of the Republic
   move_straight(enc1, enc2, 12);
   while(true){
-    white_line_follow(350, 8, 200);
+    white_line_follow(300, 8, 300);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -426,7 +424,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
 
   //Maze - 3 of each color block
   while(true){
-    white_line_follow(300, 8, 200);
+    white_line_follow(300, 8, 300);
     int turn_white = 0;
     for(int i = 0; i < 10; i++){
       if (lineArray[i] == 0) {
@@ -436,13 +434,15 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
     if(turn_white >= 5){
       M1_stop();
       M2_stop();
-      //delay(1000);
+      delay(1000);
       break;
     }
   }
-  turn_right90(enc1,enc2);
+  move_straight(enc1,enc2,3);
+  right_turn_till_line(enc1,enc2);
+
   while(true){
-    white_line_follow(350, 8, 200);
+    white_line_follow(350, 8, 300);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -478,36 +478,57 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       break;
     }
   }
-  move_straight(enc1, enc2, 12);
+  */
+ /*
+  move_straight(enc1, enc2, 24);
   turn_left90(enc1, enc2);
-  move_straight(enc1, enc2, 12);
-  delay(2000);
+  move_straight(enc1,enc2,12);
 
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 250; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  long enc1_value = enc1.read();
+  long enc2_value = enc2.read();
+  // long dist_travelled = (enc1_value/154.32)*1.26*PI;
 
-  //asteroid field
   while(true){
-    white_line_follow(350, 8, 200);
-    int all_white = 0;
-    for (int i = 0; i < 13; i++) {
-      if (lineArray[i] == 0) {
-        all_white+=1;
-      } 
-    }
-    if(all_white == 13) {
-      M1_stop();
-      M2_stop();
-      delay(2000);
-      break;
-    }
+      //travel forwards
+      readADC();
+      digitalConvert();
+      error = enc1_value + enc2_value;
+      total_error += error;
+      int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+      int right_motor = base_pid + pid_value;
+      int left_motor = base_pid - pid_value;
+      M1_forward(left_motor);
+      M2_forward(right_motor);
+      int all_white = 0;
+      for (int i = 0; i < 13; i++) {
+        if (lineArray[i] == 0) {
+          all_white+=1;
+        } 
+      }
+      if(all_white >= 5) { //try to reach end square without appearing to stop
+        M1_stop();
+        M2_stop();
+        delay(1000);
+        break;
+      }
+      enc1_value = enc1.read();
+      enc2_value = enc2.read();
+      // dist_travelled = (enc1_value/154.32)*1.26*PI;
+      last_error = error;
   }
   move_straight(enc1, enc2, 12);
-  turn_right90(enc1, enc2);
-  move_straight(enc1, enc2, 12);
+  turn_right90(enc1,enc2);
+  //move_straight(enc1, enc2, 6);
   delay(2000);
 */
 
-
-
+/*
   //Sound detection
   while(true){
     white_line_follow(300, 8, 300);
@@ -683,7 +704,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   move_straight(enc1, enc2, 12);
   turn_left90(enc1, enc2);
   move_straight(enc1, enc2, 12);
-
+*/
   
   //Small white line
   // while(true){
@@ -701,68 +722,71 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   //     break;
   //   }
   // }
-  // move_straight(enc1, enc2, 12);
+  // move_straight(enc1, enc2, 18);
   // turn_left90(enc1, enc2);
-  // move_straight(enc1, enc2, 12);
+  // move_straight(enc1, enc2, 10);
 
 
-
+  /*
   //Straight shot to end
-  // while(true){
-  //   white_line_follow(350, 8, 300);
-  //   int all_black = 0;
-  //   for (int i = 0; i < 13; i++) {
-  //     if (lineArray[i] == 1) {
-  //       all_black+=1;
-  //     } 
-  //   }
-  //   if(all_black == 13) {
-  //     M1_stop();
-  //     M2_stop();
-  //     //delay(2000);
-  //     break;
-  //   }
-  // }
+  while(true){
+    white_line_follow(230, 12, 300);
+    int all_black = 0;
+    for (int i = 0; i < 13; i++) {
+      if (lineArray[i] == 1) {
+        all_black+=1;
+      } 
+    }
+    if(all_black == 13) {
+      M1_stop();
+      M2_stop();
+      delay(1000);
+      break;
+    }
+  }
 
-  // enc1.readAndReset();
-  // enc2.readAndReset();
-  // base_pid = 450; //450
-  // Kp = 3; //3
-  // Kd = 0; //0
-  // Ki = 0;
-  // long enc1_value = enc1.read();
-  // long enc2_value = enc2.read();
-  // // long dist_travelled = (enc1_value/154.32)*1.26*PI;
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 250; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  long enc1_value = enc1.read();
+  long enc2_value = enc2.read();
+  // long dist_travelled = (enc1_value/154.32)*1.26*PI;
 
-  // while(true){
-  //     //travel forwards
-  //     error = enc1_value + enc2_value;
-  //     total_error += error;
-  //     int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
-  //     int right_motor = base_pid + pid_value;
-  //     int left_motor = base_pid - pid_value;
-  //     M1_forward(left_motor);
-  //     M2_forward(right_motor);
-  //     int all_white = 0;
-  //     for (int i = 0; i < 13; i++) {
-  //       if (lineArray[i] == 0) {
-  //         all_white+=1;
-  //       } 
-  //     }
-  //     if(all_white == 13) { //try to reach end square without appearing to stop
-  //       M1_stop();
-  //       M2_stop();
-  //       move_straight(enc1, enc2, 12);
-  //       delay(2000);
-  //       break;
-  //     }
-  //     enc1_value = enc1.read();
-  //     enc2_value = enc2.read();
-  //     // dist_travelled = (enc1_value/154.32)*1.26*PI;
-  //     last_error = error;
-  // }
-  // delay(2000);
-
+  while(true){
+      //travel forwards
+      readADC();
+      digitalConvert();
+      error = enc1_value + enc2_value;
+      total_error += error;
+      int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+      int right_motor = base_pid + pid_value;
+      int left_motor = base_pid - pid_value;
+      M1_forward(left_motor);
+      M2_forward(right_motor);
+      int all_white = 0;
+      for (int i = 0; i < 13; i++) {
+        if (lineArray[i] == 0) {
+          all_white+=1;
+        } 
+      }
+      if(all_white == 13) { //try to reach end square without appearing to stop
+        M1_stop();
+        M2_stop();
+        delay(1000);
+        move_straight(enc1, enc2, 12);
+        delay(1000);
+        break;
+      }
+      enc1_value = enc1.read();
+      enc2_value = enc2.read();
+      // dist_travelled = (enc1_value/154.32)*1.26*PI;
+      last_error = error;
+  }
+  delay(2000);
+  */
   /*
   // For straight continuous line: speed = 350, kp = 2, kd = 100, ki = 0
   // For dotted line: speed = 300, kp = 12, kd = 300, ki = 0
