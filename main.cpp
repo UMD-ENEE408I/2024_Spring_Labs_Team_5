@@ -245,10 +245,6 @@ void turn_180(Encoder& enc1, Encoder& enc2){
     int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
     int right_motor = base_pid + pid_value;
     int left_motor = base_pid - pid_value;
-
-    // Serial.print("left_enc: \t");Serial.print(enc1_value);Serial.print("\t right_enc: \t");Serial.println(enc2_value);
-    // Serial.print("Enc2 Degrees: \t"); Serial.print((enc2_value/154.32)); Serial.print("\t");
-    // Serial.print("left: \t"); Serial.print(left_motor);Serial.print("right: \t"); Serial.println(right_motor); 
     M1_forward(left_motor);
     M2_backward(right_motor);
     enc1_value = enc1.read();
@@ -316,7 +312,7 @@ void right_turn_till_line(Encoder& enc1, Encoder& enc2){
     if((lineArray[0]==0)||(lineArray[1]==0)){
       time_to_turn++;
     }
-    if((time_to_turn>0)&&((lineArray[4]==0)||(lineArray[5]==0)||(lineArray[6]==0)||(lineArray[7]==0))){
+    if((time_to_turn>0)&&((lineArray[5]==0)||(lineArray[6]==0)||(lineArray[7]==0))){//(lineArray[4]==0)||
       break;
     }
     enc1_value = enc1.read();
@@ -362,6 +358,73 @@ void left_turn_till_line(Encoder& enc1, Encoder& enc2){
   M2_stop();
   delay(2000);
 }
+
+void maze_straight(Encoder& enc1, Encoder& enc2){
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 300; //450
+  Kp = 8; 
+  Kd = 300;
+  Ki = 0;
+  long enc1_value = enc1.read();
+  long enc2_value = enc2.read();
+  long dist_travelled = (enc1_value/154.32)*1.26*PI;
+  int empty_space = 0;
+  int turn_white = 0;
+
+  while((dist_travelled < 8) && (move_once == 0)){
+      //travel forwards
+      readADC();
+      digitalConvert();
+      float pos = getPosition(previousPosition);
+      previousPosition = pos;
+
+      error = pos - mid;
+      total_error += error;
+
+      int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+      int right_motor = base_pid + pid_value;
+      int left_motor = base_pid - pid_value;
+
+      M1_forward(left_motor);
+      M2_forward(right_motor);
+      enc1_value = enc1.read();
+      enc2_value = enc2.read();
+      dist_travelled = (abs(enc1_value)/154.32)*1.26*PI;
+      last_error = error;
+      if((lineArray[5]==1)&&(lineArray[6]==1)&&(lineArray[7]==1)) {
+        M1_stop();
+        M2_stop();
+        delay(1000);
+        empty_space = 1;
+        break;
+      }
+      turn_white = 0;
+      for(int i = 0; i < 10; i++){
+        if (lineArray[i] == 0) {
+            turn_white+=1;
+        }
+      }
+      if(turn_white >= 5){
+        M1_stop();
+        M2_stop();
+        delay(1000);
+        break;
+      }
+  }
+  if(empty_space == 1){
+    move_straight(enc1,enc2,5);
+  }else if(turn_white >= 5){
+    move_straight(enc1,enc2,3);
+    right_turn_till_line(enc1,enc2);
+  }else{
+    M1_stop();
+    M2_stop();
+    delay(2000);
+  }
+  move_once = 0;
+}
+
 
 void setup() {
   // Stop the right motor by setting pin 14 low
@@ -464,7 +527,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
 
   //segmented line, make sure to change K values and speed
   while(true){
-    white_line_follow(230, 12, 400);
+    white_line_follow(220, 12, 500);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -478,11 +541,34 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       break;
     }
   }
-  */
- /*
-  move_straight(enc1, enc2, 24);
-  turn_left90(enc1, enc2);
-  move_straight(enc1,enc2,12);
+  
+ 
+  move_straight(enc1, enc2, 36);//24
+  //turn_left90(enc1, enc2);
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  long enc1_value = enc1.read();
+  long enc2_value = enc2.read(); //right motor
+  while(enc2_value > -230){//3 3/8 inches -240 - try sensor fusion
+    error = enc2_value - enc1_value;
+    total_error += error;
+    int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+    int right_motor = base_pid + pid_value;
+    int left_motor = base_pid - pid_value;
+    M1_backward(left_motor);
+    M2_forward(right_motor);
+    enc1_value = enc1.read();
+    enc2_value = enc2.read();
+    last_error = error;
+  }
+  M1_stop();
+  M2_stop();
+  delay(2000);
+  //move_straight(enc1,enc2,12);
 
   enc1.readAndReset();
   enc2.readAndReset();
@@ -490,11 +576,11 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   Kp = 1; //3
   Kd = 10; //0
   Ki = 0;
-  long enc1_value = enc1.read();
-  long enc2_value = enc2.read();
-  // long dist_travelled = (enc1_value/154.32)*1.26*PI;
+  enc1_value = enc1.read();
+  enc2_value = enc2.read();
+  long dist_travelled = (enc1_value/154.32)*1.26*PI;
 
-  while(true){
+  while(dist_travelled < 140){
       //travel forwards
       readADC();
       digitalConvert();
@@ -519,16 +605,71 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       }
       enc1_value = enc1.read();
       enc2_value = enc2.read();
-      // dist_travelled = (enc1_value/154.32)*1.26*PI;
+      dist_travelled = (enc1_value/154.32)*1.26*PI;
       last_error = error;
   }
-  move_straight(enc1, enc2, 12);
-  turn_right90(enc1,enc2);
-  //move_straight(enc1, enc2, 6);
+  M1_stop();
+  M2_stop();
+  delay(1000);
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  enc1_value = enc1.read();
+  enc2_value = enc2.read(); //right motor
+  while(enc2_value > -210){//3 3/8 inches -240 - try sensor fusion
+    error = enc2_value - enc1_value;
+    total_error += error;
+    int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+    int right_motor = base_pid + pid_value;
+    int left_motor = base_pid - pid_value;
+    M1_backward(left_motor);
+    M2_forward(right_motor);
+    enc1_value = enc1.read();
+    enc2_value = enc2.read();
+    last_error = error;
+  }
+  M1_stop();
+  M2_stop();
   delay(2000);
-*/
+  move_straight(enc1, enc2, 10);
+  turn_right90(enc1,enc2);
+  move_straight(enc1, enc2, 24);
+  //turn_right90(enc1,enc2);
+  enc1.readAndReset();
+  enc2.readAndReset();
+  base_pid = 300; //450
+  Kp = 1; //3
+  Kd = 10; //0
+  Ki = 0;
+  enc1_value = enc1.read();
+  enc2_value = enc2.read(); //right motor
+  while(enc1_value < 220){//3 3/8 inches 240 - try sensor fusion, 280 maybe
+    error = enc2_value - enc1_value; //may have to subtract instead of add these
+    total_error += error;
+    int pid_value = Kp*error + Kd*(error-last_error) + Ki*total_error;
+    int right_motor = base_pid - pid_value;
+    int left_motor = base_pid + pid_value;
 
-/*
+    // Serial.print("left_enc: \t");Serial.print(enc1_value);Serial.print("\t right_enc: \t");Serial.println(enc2_value);
+    // Serial.print("Enc2 Degrees: \t"); Serial.print((enc2_value/154.32)); Serial.print("\t");
+    // Serial.print("left: \t"); Serial.print(left_motor);Serial.print("right: \t"); Serial.println(right_motor); 
+    M1_forward(left_motor);
+    M2_backward(right_motor);
+    enc1_value = enc1.read();
+    enc2_value = enc2.read();
+    last_error = error;
+  }
+  M1_stop();
+  M2_stop();
+  delay(2000);
+  move_straight(enc1, enc2, 6);
+  delay(2000);
+
+
+
   //Sound detection
   while(true){
     white_line_follow(300, 8, 300);
@@ -704,30 +845,31 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   move_straight(enc1, enc2, 12);
   turn_left90(enc1, enc2);
   move_straight(enc1, enc2, 12);
-*/
+
   
   //Small white line
-  // while(true){
-  //   white_line_follow(350, 8, 300);
-  //   int all_white = 0;
-  //   for (int i = 0; i < 13; i++) {
-  //     if (lineArray[i] == 0) {
-  //       all_white+=1;
-  //     } 
-  //   }
-  //   if(all_white == 13) {
-  //     M1_stop();
-  //     M2_stop();
-  //     delay(2000);
-  //     break;
-  //   }
-  // }
-  // move_straight(enc1, enc2, 18);
-  // turn_left90(enc1, enc2);
-  // move_straight(enc1, enc2, 10);
-
-
+  while(true){
+    white_line_follow(300, 8, 300);
+    int all_white = 0;
+    for (int i = 0; i < 13; i++) {
+      if (lineArray[i] == 0) {
+        all_white+=1;
+      } 
+    }
+    if(all_white == 13) {
+      M1_stop();
+      M2_stop();
+      delay(2000);
+      break;
+    }
+  }*/
   /*
+  move_straight(enc1, enc2, 12);
+  turn_left90(enc1, enc2);
+  move_straight(enc1, enc2, 6);
+
+
+  
   //Straight shot to end
   while(true){
     white_line_follow(230, 12, 300);
