@@ -142,7 +142,7 @@ float getPosition(float previousPosition) {
 void move_straight(Encoder& enc1, Encoder& enc2, int dist){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 300; //450
+  base_pid = 260; //450
   Kp = 3; //3
   Kd = 0; //0
   Ki = 0;
@@ -173,7 +173,7 @@ void move_straight(Encoder& enc1, Encoder& enc2, int dist){
 void turn_left90(Encoder& enc1, Encoder& enc2){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 300; //450
+  base_pid = 260; //450
   Kp = 1; //3
   Kd = 10; //0
   Ki = 0;
@@ -203,7 +203,7 @@ void turn_left90(Encoder& enc1, Encoder& enc2){
 void turn_right90(Encoder& enc1, Encoder& enc2){
   enc1.readAndReset();
   enc2.readAndReset();
-  base_pid = 300; //450
+  base_pid = 260; //450
   Kp = 1; //3
   Kd = 10; //0
   Ki = 0;
@@ -462,8 +462,8 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   Encoder enc1(M1_ENC_A, M1_ENC_B);
   Encoder enc2(M2_ENC_A, M2_ENC_B);
   //maze_straight(enc1,enc2);
-  move_straight(enc1,enc2,10);
-/*
+  //move_straight(enc1,enc2,10);
+
   //Line of the Republic
   move_straight(enc1, enc2, 12);
   while(true){
@@ -481,7 +481,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       break;
     }
   }
-  move_straight(enc1, enc2, 12);
+  move_straight(enc1, enc2, 16);
   turn_right90(enc1, enc2);
   move_straight(enc1, enc2, 12);
   delay(2000);
@@ -521,7 +521,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       break;
     }
   }
-  move_straight(enc1, enc2, 12);
+  move_straight(enc1, enc2, 14);
   turn_left90(enc1, enc2);
   move_straight(enc1, enc2, 12);
   delay(2000);
@@ -529,7 +529,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
 
   //segmented line, make sure to change K values and speed
   while(true){
-    white_line_follow(220, 12, 500);
+    white_line_follow(230, 12, 400);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -582,7 +582,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   enc2_value = enc2.read();
   long dist_travelled = (enc1_value/154.32)*1.26*PI;
 
-  while(dist_travelled < 140){
+  while(dist_travelled < 160){
       //travel forwards
       readADC();
       digitalConvert();
@@ -636,9 +636,9 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   M1_stop();
   M2_stop();
   delay(2000);
-  move_straight(enc1, enc2, 10);
+  move_straight(enc1, enc2, 12);
   turn_right90(enc1,enc2);
-  move_straight(enc1, enc2, 24);
+  move_straight(enc1, enc2, 12);
   //turn_right90(enc1,enc2);
   enc1.readAndReset();
   enc2.readAndReset();
@@ -671,9 +671,9 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   delay(2000);
 
 
-*/
+
   //Sound detection
-  /*while(true){
+  while(true){
     white_line_follow(300, 8, 300);
     int turn_white = 0;
     for(int i = 0; i < 10; i++){
@@ -851,7 +851,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   
   //Small white line
   while(true){
-    white_line_follow(300, 8, 300);
+    white_line_follow(250, 8, 300);
     int all_white = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 0) {
@@ -864,17 +864,17 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       delay(2000);
       break;
     }
-  }*/
-  /*
+  }
+  
   move_straight(enc1, enc2, 12);
   turn_left90(enc1, enc2);
-  move_straight(enc1, enc2, 6);
+  move_straight(enc1, enc2, 12);
 
 
   
   //Straight shot to end
   while(true){
-    white_line_follow(230, 12, 300);
+    white_line_follow(250, 12, 300);
     int all_black = 0;
     for (int i = 0; i < 13; i++) {
       if (lineArray[i] == 1) {
@@ -895,8 +895,8 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
   Kp = 1; //3
   Kd = 10; //0
   Ki = 0;
-  long enc1_value = enc1.read();
-  long enc2_value = enc2.read();
+  enc1_value = enc1.read();
+  enc2_value = enc2.read();
   // long dist_travelled = (enc1_value/154.32)*1.26*PI;
 
   while(true){
@@ -930,7 +930,7 @@ void loop() {//key at AVW 1338, take video of it running in case it doesn't work
       last_error = error;
   }
   delay(2000);
-  */
+  
   /*
   // For straight continuous line: speed = 350, kp = 2, kd = 100, ki = 0
   // For dotted line: speed = 300, kp = 12, kd = 300, ki = 0
